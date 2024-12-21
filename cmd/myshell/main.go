@@ -17,12 +17,14 @@ func main() {
 		readString := scanner.Text()
 
 		strippedReadString := strings.Trim(readString, "\n")
-		upperReadString := strings.ToUpper(strippedReadString)
-		firstCommandReadString := strings.Split(upperReadString, " ")[0]
+		splitReadString := strings.Split(strippedReadString, " ")
+		firstCommandReadString := splitReadString[0]
 
-		switch firstCommandReadString {
+		switch strings.ToUpper(firstCommandReadString) {
 		case "EXIT":
 			os.Exit(0)
+		case "ECHO":
+			fmt.Println(strings.Join(splitReadString[1:], " "))
 		default:
 			fmt.Printf("%s: command not found\n", strippedReadString)
 		}
