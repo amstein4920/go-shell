@@ -17,8 +17,12 @@ func main() {
 		readString := scanner.Text()
 
 		strippedReadString := strings.Trim(readString, "\n")
+		upperReadString := strings.ToUpper(strippedReadString)
+		firstCommandReadString := strings.Split(upperReadString, " ")[0]
 
-		switch {
+		switch firstCommandReadString {
+		case "EXIT":
+			os.Exit(0)
 		default:
 			fmt.Printf("%s: command not found\n", strippedReadString)
 		}
@@ -26,6 +30,6 @@ func main() {
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input", err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 }
