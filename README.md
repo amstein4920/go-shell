@@ -1,1 +1,1 @@
-POSIX CLI application based on CodeCrafters Shell project
+# POSIX CLI shell based on CodeCrafters Shell project
