@@ -11,15 +11,21 @@ import (
 var _ = fmt.Fprint
 
 func main() {
+	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Fprint(os.Stdout, "$ ")
+	for scanner.Scan() {
+		readString := scanner.Text()
 
-	// Wait for user input
-	readString, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		strippedReadString := strings.Trim(readString, "\n")
 
-	strippedReadString := strings.Trim(readString, "\n")
-
-	switch {
-	default:
-		fmt.Printf("%s: command not found\n", strippedReadString)
+		switch {
+		default:
+			fmt.Printf("%s: command not found\n", strippedReadString)
+		}
+		fmt.Fprint(os.Stdout, "$ ")
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading standard input", err)
+		os.Exit(-1)
 	}
 }
