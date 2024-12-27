@@ -7,8 +7,11 @@ import (
 	"strings"
 )
 
-// Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
-var _ = fmt.Fprint
+const (
+	EXIT = "EXIT"
+	ECHO = "ECHO"
+	TYPE = "TYPE"
+)
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -21,10 +24,12 @@ func main() {
 		firstCommandReadString := splitReadString[0]
 
 		switch strings.ToUpper(firstCommandReadString) {
-		case "EXIT":
+		case EXIT:
 			os.Exit(0)
-		case "ECHO":
+		case ECHO:
 			fmt.Println(strings.Join(splitReadString[1:], " "))
+		case TYPE:
+			fmt.Println(typeCommandFunction(splitReadString[1]))
 		default:
 			fmt.Printf("%s: command not found\n", strippedReadString)
 		}
@@ -33,5 +38,14 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input", err)
 		os.Exit(1)
+	}
+}
+
+func typeCommandFunction(input string) string {
+	switch strings.ToUpper(input) {
+	case EXIT, ECHO, TYPE:
+		return fmt.Sprintf("%s is a shell builtin", input)
+	default:
+		return fmt.Sprintf("%s: not found", input)
 	}
 }
