@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -13,11 +14,21 @@ const (
 	TYPE = "TYPE"
 )
 
+type shellConfig struct {
+}
+
 func main() {
+	config := shellConfig{}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Fprint(os.Stdout, "$ ")
 	for scanner.Scan() {
 		readString := scanner.Text()
+
+		if readString == "" {
+			fmt.Fprint(os.Stdout, "$ ")
+			continue
+		}
 
 		strippedReadString := strings.Trim(readString, "\n")
 		splitReadString := strings.Split(strippedReadString, " ")
@@ -29,7 +40,7 @@ func main() {
 		case ECHO:
 			fmt.Println(strings.Join(splitReadString[1:], " "))
 		case TYPE:
-			fmt.Println(typeCommandFunction(splitReadString[1]))
+			fmt.Println(config.typeCommandFunction(splitReadString[1]))
 		default:
 			fmt.Printf("%s: command not found\n", strippedReadString)
 		}
@@ -41,11 +52,15 @@ func main() {
 	}
 }
 
-func typeCommandFunction(input string) string {
+func (config *shellConfig) typeCommandFunction(input string) string {
 	switch strings.ToUpper(input) {
 	case EXIT, ECHO, TYPE:
 		return fmt.Sprintf("%s is a shell builtin", input)
 	default:
-		return fmt.Sprintf("%s: not found", input)
+		pathToCommand, err := exec.LookPath(input)
+		if err != nil {
+			return fmt.Sprintf("%s: not found", input)
+		}
+		return fmt.Sprintf("%s is %s", input, pathToCommand)
 	}
 }
