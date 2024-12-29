@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -43,7 +44,7 @@ func main() {
 		case ECHO:
 			fmt.Println(strings.Join(arguments, " "))
 		case TYPE:
-			fmt.Println(config.typeCommandFunction(splitReadString[1]))
+			fmt.Println(config.typeBuiltinFunction(splitReadString[1]))
 		case PWD:
 			wd, err := os.Getwd()
 			if err != nil {
@@ -51,19 +52,12 @@ func main() {
 			}
 			fmt.Println(wd)
 		case CD:
-			err := os.Chdir(arguments[0])
+			err := config.cdBuiltinFunction(arguments[0])
 			if err != nil {
-				fmt.Printf("cd: %s: No such file or directory\n", arguments[0])
+				fmt.Println(err)
 			}
 		default:
-			cmd := exec.Command(firstCommandReadString, arguments...)
-			stdout, err := cmd.Output()
-			if err != nil {
-				fmt.Printf("%s: command not found\n", firstCommandReadString)
-			} else {
-				// I want to standardize all outputs to have exactly one \n. No more, no less
-				fmt.Println(strings.Trim(string(stdout), "\n"))
-			}
+			fmt.Print(config.commandExecutionFunction(splitReadString))
 		}
 		fmt.Fprint(os.Stdout, "$ ")
 	}
@@ -73,7 +67,7 @@ func main() {
 	}
 }
 
-func (config *shellConfig) typeCommandFunction(input string) string {
+func (config *shellConfig) typeBuiltinFunction(input string) string {
 	switch strings.ToUpper(input) {
 	case EXIT, ECHO, TYPE, PWD, CD:
 		return fmt.Sprintf("%s is a shell builtin", input)
@@ -84,4 +78,32 @@ func (config *shellConfig) typeCommandFunction(input string) string {
 		}
 		return fmt.Sprintf("%s is %s", input, pathToCommand)
 	}
+}
+
+// Executes provided command and returns the standard output string. The command not found message also catches for builtins
+func (config *shellConfig) commandExecutionFunction(inputStrings []string) string {
+	cmd := exec.Command(inputStrings[0], inputStrings[1:]...)
+	stdout, err := cmd.Output()
+	if err != nil {
+		return fmt.Sprintf("%s: command not found\n", inputStrings[0])
+	} else {
+		// I want to standardize all outputs to have exactly one \n. No more, no less
+		return fmt.Sprintln(strings.Trim(string(stdout), "\n"))
+	}
+}
+
+func (config *shellConfig) cdBuiltinFunction(input string) error {
+	inputCopy := strings.Clone(input)
+	if inputCopy == "~" {
+		var err error
+		inputCopy, err = os.UserHomeDir()
+		if err != nil {
+			return errors.New("cd: invalid home")
+		}
+	}
+	err := os.Chdir(inputCopy)
+	if err != nil {
+		return fmt.Errorf("cd: %s: No such file or directory", inputCopy)
+	}
+	return nil
 }
