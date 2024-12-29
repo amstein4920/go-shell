@@ -13,6 +13,7 @@ const (
 	ECHO = "ECHO"
 	TYPE = "TYPE"
 	PWD  = "PWD"
+	CD   = "CD"
 )
 
 type shellConfig struct {
@@ -49,6 +50,11 @@ func main() {
 				fmt.Fprintln(os.Stderr, "reading working directory", err)
 			}
 			fmt.Println(wd)
+		case CD:
+			err := os.Chdir(arguments[0])
+			if err != nil {
+				fmt.Printf("cd: %s: No such file or directory\n", arguments[0])
+			}
 		default:
 			cmd := exec.Command(firstCommandReadString, arguments...)
 			stdout, err := cmd.Output()
@@ -69,7 +75,7 @@ func main() {
 
 func (config *shellConfig) typeCommandFunction(input string) string {
 	switch strings.ToUpper(input) {
-	case EXIT, ECHO, TYPE, PWD:
+	case EXIT, ECHO, TYPE, PWD, CD:
 		return fmt.Sprintf("%s is a shell builtin", input)
 	default:
 		pathToCommand, err := exec.LookPath(input)
