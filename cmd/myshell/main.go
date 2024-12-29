@@ -33,16 +33,24 @@ func main() {
 		strippedReadString := strings.Trim(readString, "\n")
 		splitReadString := strings.Split(strippedReadString, " ")
 		firstCommandReadString := splitReadString[0]
+		arguments := splitReadString[1:]
 
 		switch strings.ToUpper(firstCommandReadString) {
 		case EXIT:
 			os.Exit(0)
 		case ECHO:
-			fmt.Println(strings.Join(splitReadString[1:], " "))
+			fmt.Println(strings.Join(arguments, " "))
 		case TYPE:
 			fmt.Println(config.typeCommandFunction(splitReadString[1]))
 		default:
-			fmt.Printf("%s: command not found\n", strippedReadString)
+			cmd := exec.Command(firstCommandReadString, arguments...)
+			stdout, err := cmd.Output()
+			if err != nil {
+				fmt.Printf("%s: command not found\n", firstCommandReadString)
+			} else {
+				// I want to standardize all outputs to have exactly one \n. No more, no less
+				fmt.Println(strings.Trim(string(stdout), "\n"))
+			}
 		}
 		fmt.Fprint(os.Stdout, "$ ")
 	}
