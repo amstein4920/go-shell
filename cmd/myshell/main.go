@@ -26,6 +26,8 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Fprint(os.Stdout, "$ ")
 	for scanner.Scan() {
+		stdOutput := ""
+
 		readString := scanner.Text()
 
 		if readString == "" {
@@ -37,12 +39,20 @@ func main() {
 		splitReadString := strings.Split(strippedReadString, " ")
 		firstCommandReadString := splitReadString[0]
 		arguments := splitReadString[1:]
+		var secondaryCommand []string
+
+		for index, arg := range arguments {
+			if arg == "1>" || arg == ">" {
+				arguments = splitReadString[1 : index+1]
+				secondaryCommand = splitReadString[index+1:]
+			}
+		}
 
 		switch strings.ToUpper(firstCommandReadString) {
 		case EXIT:
 			os.Exit(0)
 		case ECHO:
-			fmt.Println(strings.Join(arguments, " "))
+			stdOutput = strings.Trim(strings.Join(arguments, " "), "'") + "\n"
 		case TYPE:
 			fmt.Println(config.typeBuiltinFunction(splitReadString[1]))
 		case PWD:
@@ -50,17 +60,35 @@ func main() {
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "reading working directory", err)
 			}
-			fmt.Println(wd)
+			stdOutput = wd + "\n"
 		case CD:
 			err := config.cdBuiltinFunction(arguments[0])
 			if err != nil {
 				fmt.Println(err)
 			}
 		default:
-			fmt.Print(config.commandExecutionFunction(splitReadString))
+			var err error
+			stdOutput, err = config.commandExecutionFunction(firstCommandReadString, arguments)
+			if err != nil {
+				fmt.Print(err)
+			}
+		}
+		if len(secondaryCommand) > 0 {
+			secondCommand := secondaryCommand[0]
+			secondArgs := secondaryCommand[1:]
+			switch secondCommand {
+			case ">", "1>":
+				err := config.writeToFile(secondArgs[0], stdOutput)
+				if err != nil {
+					fmt.Println("Error writing to file:", err)
+				}
+			}
+		} else {
+			fmt.Fprint(os.Stdout, stdOutput)
 		}
 		fmt.Fprint(os.Stdout, "$ ")
 	}
+
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input", err)
 		os.Exit(1)
@@ -81,15 +109,26 @@ func (config *shellConfig) typeBuiltinFunction(input string) string {
 }
 
 // Executes provided command and returns the standard output string. The command not found message also catches for builtins
-func (config *shellConfig) commandExecutionFunction(inputStrings []string) string {
-	cmd := exec.Command(inputStrings[0], inputStrings[1:]...)
-	stdout, err := cmd.Output()
+func (config *shellConfig) commandExecutionFunction(command string, arguments []string) (string, error) {
+	var stdout []byte
+	var returnError error
+
+	_, err := exec.LookPath(command)
 	if err != nil {
-		return fmt.Sprintf("%s: command not found\n", inputStrings[0])
+		returnError = fmt.Errorf("%s: command not found", command)
 	} else {
-		// I want to standardize all outputs to have exactly one \n. No more, no less
-		return fmt.Sprintln(strings.Trim(string(stdout), "\n"))
+		cmd := exec.Command(command, arguments...)
+		stdout, err = cmd.Output()
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				returnError = errors.New(string(exitErr.Stderr))
+			} else {
+				returnError = fmt.Errorf("error:%s", err)
+			}
+		}
 	}
+	// I want to standardize all outputs to have exactly one \n. No more, no less
+	return fmt.Sprintln(strings.Trim(string(stdout), "\n")), returnError
 }
 
 func (config *shellConfig) cdBuiltinFunction(input string) error {
@@ -106,4 +145,9 @@ func (config *shellConfig) cdBuiltinFunction(input string) error {
 		return fmt.Errorf("cd: %s: No such file or directory", inputCopy)
 	}
 	return nil
+}
+
+func (config *shellConfig) writeToFile(file string, output string) error {
+	err := os.WriteFile(file, []byte(output), 0o777)
+	return err
 }
