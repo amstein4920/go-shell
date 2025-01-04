@@ -23,12 +23,13 @@ type shellConfig struct {
 func main() {
 	config := shellConfig{}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Fprint(os.Stdout, "$ ")
-	for scanner.Scan() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Fprint(os.Stdout, "$ ")
 		stdOutput := ""
+		stdError := ""
 
-		readString := scanner.Text()
+		readString, _ := reader.ReadString('\n')
 
 		if readString == "" {
 			fmt.Fprint(os.Stdout, "$ ")
@@ -41,10 +42,10 @@ func main() {
 		arguments := splitReadString[1:]
 		var secondaryCommand []string
 
-		for index, arg := range arguments {
-			if arg == "1>" || arg == ">" {
-				arguments = splitReadString[1 : index+1]
-				secondaryCommand = splitReadString[index+1:]
+		for i, arg := range arguments {
+			if arg == "1>" || arg == ">" || arg == "2>" {
+				arguments = splitReadString[1 : i+1]
+				secondaryCommand = splitReadString[i+1:]
 			}
 		}
 
@@ -54,23 +55,27 @@ func main() {
 		case ECHO:
 			stdOutput = strings.Trim(strings.Join(arguments, " "), "'") + "\n"
 		case TYPE:
-			fmt.Println(config.typeBuiltinFunction(splitReadString[1]))
+			var err error
+			stdOutput, err = config.typeBuiltinFunction(splitReadString[1])
+			if err != nil {
+				stdError = err.Error() + "\n"
+			}
 		case PWD:
 			wd, err := os.Getwd()
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "reading working directory", err)
+				stdError = fmt.Sprintln("reading working directory", err)
 			}
 			stdOutput = wd + "\n"
 		case CD:
 			err := config.cdBuiltinFunction(arguments[0])
 			if err != nil {
-				fmt.Println(err)
+				stdError = err.Error() + "\n"
 			}
 		default:
 			var err error
 			stdOutput, err = config.commandExecutionFunction(firstCommandReadString, arguments)
 			if err != nil {
-				fmt.Print(err)
+				stdError = err.Error()
 			}
 		}
 		if len(secondaryCommand) > 0 {
@@ -82,29 +87,35 @@ func main() {
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 				}
+				fmt.Fprint(os.Stderr, stdError)
+			case "2>":
+				err := config.writeToFile(secondArgs[0], stdError)
+				if err != nil {
+					fmt.Println("Error writing to file:", err)
+				}
+				fmt.Fprint(os.Stdout, stdOutput)
 			}
 		} else {
-			fmt.Fprint(os.Stdout, stdOutput)
+			if len(stdOutput) > 0 {
+				fmt.Fprint(os.Stdout, stdOutput)
+			}
+			if len(stdError) > 0 {
+				fmt.Fprint(os.Stderr, stdError)
+			}
 		}
-		fmt.Fprint(os.Stdout, "$ ")
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input", err)
-		os.Exit(1)
 	}
 }
 
-func (config *shellConfig) typeBuiltinFunction(input string) string {
+func (config *shellConfig) typeBuiltinFunction(input string) (string, error) {
 	switch strings.ToUpper(input) {
 	case EXIT, ECHO, TYPE, PWD, CD:
-		return fmt.Sprintf("%s is a shell builtin", input)
+		return fmt.Sprintf("%s is a shell builtin\n", input), nil
 	default:
 		pathToCommand, err := exec.LookPath(input)
 		if err != nil {
-			return fmt.Sprintf("%s: not found", input)
+			return "", fmt.Errorf("%s: not found", input)
 		}
-		return fmt.Sprintf("%s is %s", input, pathToCommand)
+		return fmt.Sprintf("%s is %s\n", input, pathToCommand), nil
 	}
 }
 
@@ -115,20 +126,19 @@ func (config *shellConfig) commandExecutionFunction(command string, arguments []
 
 	_, err := exec.LookPath(command)
 	if err != nil {
-		returnError = fmt.Errorf("%s: command not found", command)
-	} else {
-		cmd := exec.Command(command, arguments...)
-		stdout, err = cmd.Output()
-		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				returnError = errors.New(string(exitErr.Stderr))
-			} else {
-				returnError = fmt.Errorf("error:%s", err)
-			}
+		// This really should probably be output to stdErr, but I struggled to find a way to get that to function
+		return command + ": command not found\n", nil
+	}
+	cmd := exec.Command(command, arguments...)
+	stdout, err = cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			returnError = errors.New(string(exitErr.Stderr))
+		} else {
+			returnError = fmt.Errorf("error:%s", err)
 		}
 	}
-	// I want to standardize all outputs to have exactly one \n. No more, no less
-	return fmt.Sprintln(strings.Trim(string(stdout), "\n")), returnError
+	return string(stdout), returnError
 }
 
 func (config *shellConfig) cdBuiltinFunction(input string) error {
