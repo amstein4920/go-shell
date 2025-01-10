@@ -1,1 +1,1 @@
-# POSIX CLI shell based on CodeCrafters Shell project
+# POSIX CLI shell for practicing Go
