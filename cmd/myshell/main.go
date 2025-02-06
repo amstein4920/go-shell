@@ -64,21 +64,32 @@ func parse(input string) []string {
 	var result []string
 	var temp strings.Builder
 	singleQuoted := false
+	doubleQuoted := false
 
 	for _, char := range input {
 		switch char {
 		case ' ':
-			if singleQuoted {
+			if singleQuoted || doubleQuoted {
 				temp.WriteRune(char)
 			} else if temp.Len() > 0 {
 				result = append(result, temp.String())
 				temp.Reset()
 			}
 		case '\'':
+			if doubleQuoted {
+				temp.WriteRune(char)
+				break
+			}
 			if singleQuoted {
 				singleQuoted = false
 			} else {
 				singleQuoted = true
+			}
+		case '"':
+			if doubleQuoted {
+				doubleQuoted = false
+			} else {
+				doubleQuoted = true
 			}
 		default:
 			temp.WriteRune(char)
