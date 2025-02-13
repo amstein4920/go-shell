@@ -68,48 +68,58 @@ func parse(input string) []string {
 	escaped := false
 
 	for _, char := range input {
-		if escaped {
-			if doubleQuoted || singleQuoted {
-				temp.WriteRune('\\')
-				temp.WriteRune(char)
-			} else {
-				temp.WriteRune(char)
-			}
-			escaped = false
-			continue
-		}
+		// if escaped {
+		// 	if doubleQuoted || singleQuoted {
+		// 		temp.WriteRune('\\')
+		// 		temp.WriteRune(char)
+		// 	} else {
+		// 		temp.WriteRune(char)
+		// 	}
+		// 	escaped = false
+		// 	continue
+		// }
 		switch char {
 		case '\\':
-			if !singleQuoted || !doubleQuoted {
+			if escaped || singleQuoted {
+				temp.WriteRune(char)
+				escaped = false
+			} else {
 				escaped = true
-				continue
 			}
-			temp.WriteRune(char)
 		case ' ':
-			if singleQuoted || doubleQuoted {
+			if escaped && doubleQuoted {
+				temp.WriteRune('\\')
+			}
+			if singleQuoted || doubleQuoted || escaped {
 				temp.WriteRune(char)
 			} else if temp.Len() > 0 {
 				result = append(result, temp.String())
 				temp.Reset()
 			}
+			escaped = false
 		case '\'':
-			if doubleQuoted {
+			if escaped && doubleQuoted {
+				temp.WriteRune('\\')
+			}
+			if doubleQuoted || escaped {
 				temp.WriteRune(char)
-				break
-			}
-			if singleQuoted {
-				singleQuoted = false
 			} else {
-				singleQuoted = true
+				singleQuoted = !singleQuoted
 			}
+			escaped = false
 		case '"':
-			if doubleQuoted {
-				doubleQuoted = false
+			if singleQuoted || escaped {
+				temp.WriteRune(char)
 			} else {
-				doubleQuoted = true
+				doubleQuoted = !doubleQuoted
 			}
+			escaped = false
 		default:
+			if doubleQuoted && escaped {
+				temp.WriteRune('\\')
+			}
 			temp.WriteRune(char)
+			escaped = false
 		}
 	}
 
