@@ -50,7 +50,7 @@ func main() {
 				fmt.Println(err)
 			}
 		default:
-			fmt.Print(commandExecutionFunction(parsed))
+			fmt.Print(commandExecutionFunction(command, arguments))
 		}
 		fmt.Fprint(os.Stdout, "$ ")
 	}
@@ -65,9 +65,26 @@ func parse(input string) []string {
 	var temp strings.Builder
 	singleQuoted := false
 	doubleQuoted := false
+	escaped := false
 
 	for _, char := range input {
+		if escaped {
+			if doubleQuoted {
+				temp.WriteRune('\\')
+				temp.WriteRune(char)
+			} else {
+				temp.WriteRune(char)
+			}
+			escaped = false
+			continue
+		}
 		switch char {
+		case '\\':
+			if !singleQuoted {
+				escaped = true
+				continue
+			}
+			temp.WriteRune(char)
 		case ' ':
 			if singleQuoted || doubleQuoted {
 				temp.WriteRune(char)

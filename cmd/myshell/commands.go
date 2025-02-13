@@ -22,11 +22,11 @@ func typeBuiltinFunction(input string) string {
 }
 
 // Executes provided command and returns the standard output string. The command not found message also catches for builtins
-func commandExecutionFunction(inputStrings []string) string {
-	cmd := exec.Command(inputStrings[0], inputStrings[1:]...)
+func commandExecutionFunction(command string, arguments []string) string {
+	cmd := exec.Command(command, arguments...)
 	stdout, err := cmd.Output()
 	if err != nil {
-		return fmt.Sprintf("%s: command not found\n", inputStrings[0])
+		return fmt.Sprintf("%s: command not found\n", command)
 	} else {
 		// I want to standardize all outputs to have exactly one \n. No more, no less
 		return fmt.Sprintln(strings.Trim(string(stdout), "\n"))
