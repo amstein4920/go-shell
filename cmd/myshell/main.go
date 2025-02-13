@@ -69,7 +69,7 @@ func parse(input string) []string {
 
 	for _, char := range input {
 		if escaped {
-			if doubleQuoted {
+			if doubleQuoted || singleQuoted {
 				temp.WriteRune('\\')
 				temp.WriteRune(char)
 			} else {
@@ -80,7 +80,7 @@ func parse(input string) []string {
 		}
 		switch char {
 		case '\\':
-			if !singleQuoted {
+			if !singleQuoted || !doubleQuoted {
 				escaped = true
 				continue
 			}
