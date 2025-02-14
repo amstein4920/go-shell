@@ -1,5 +1,16 @@
 # POSIX CLI shell based on CodeCrafters Shell project
 
-## Contributing
+## Install and Build Application
+Install Go: Instructions for your operating system can be found here https://go.dev/doc/install
+Clone GitHub Repo: If using GitHub CLI: gh repo clone amstein4920/myshell
+Navigate to cmd/myshell folder in project
+Build and Deploy: go build && ./myshell
 
-Can't imagine what purpose doing so would serve as this is purely a learning project for myself. I'll include instructions for building the project at a later time
+
+## Included Features
+Can Run Builtins: echo, type, cd, pwd
+Can run applications install into PATH
+Can route stdout and stderr to files
+
+## Features Being Developer
+Autocomplete

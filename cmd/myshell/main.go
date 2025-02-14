@@ -25,8 +25,7 @@ func main() {
 
 		input, _ := reader.ReadString('\n')
 
-		if input == "" {
-			fmt.Fprint(os.Stdout, "$ ")
+		if input == "\n" {
 			continue
 		}
 
@@ -50,7 +49,11 @@ func main() {
 			stdOutput = strings.Join(arguments, " ") + "\n"
 		case TYPE:
 			var err error
-			stdOutput, err = typeBuiltinFunction(parsed[1])
+			if len(arguments) < 1 {
+				stdError = "invalid number of arguments\n"
+				break
+			}
+			stdOutput, err = typeBuiltinFunction(arguments[0])
 			if err != nil {
 				stdError = err.Error() + "\n"
 			}
@@ -61,6 +64,10 @@ func main() {
 			}
 			stdOutput = wd + "\n"
 		case CD:
+			if len(arguments) < 1 {
+				stdError = "invalid number of arguments\n"
+				break
+			}
 			err := cdBuiltinFunction(arguments[0])
 			if err != nil {
 				stdError = err.Error() + "\n"
