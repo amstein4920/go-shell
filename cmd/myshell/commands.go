@@ -8,29 +8,38 @@ import (
 	"strings"
 )
 
-func typeBuiltinFunction(input string) string {
+func typeBuiltinFunction(input string) (string, error) {
 	switch strings.ToUpper(input) {
 	case EXIT, ECHO, TYPE, PWD, CD:
-		return fmt.Sprintf("%s is a shell builtin", input)
+		return fmt.Sprintf("%s is a shell builtin\n", input), nil
 	default:
 		pathToCommand, err := exec.LookPath(input)
 		if err != nil {
-			return fmt.Sprintf("%s: not found", input)
+			return "", fmt.Errorf("%s: not found", input)
 		}
-		return fmt.Sprintf("%s is %s", input, pathToCommand)
+		return fmt.Sprintf("%s is %s\n", input, pathToCommand), nil
 	}
 }
 
-// Executes provided command and returns the standard output string. The command not found message also catches for builtins
-func commandExecutionFunction(command string, arguments []string) string {
-	cmd := exec.Command(command, arguments...)
-	stdout, err := cmd.Output()
+func commandExecutionFunction(command string, arguments []string) (string, error) {
+	var stdout []byte
+	var returnError error
+
+	_, err := exec.LookPath(command)
 	if err != nil {
-		return fmt.Sprintf("%s: command not found\n", command)
-	} else {
-		// I want to standardize all outputs to have exactly one \n. No more, no less
-		return fmt.Sprintln(strings.Trim(string(stdout), "\n"))
+		// This really should probably be output to stdErr, but I struggled to find a way to get that to function
+		return command + ": command not found\n", nil
 	}
+	cmd := exec.Command(command, arguments...)
+	stdout, err = cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			returnError = errors.New(string(exitErr.Stderr))
+		} else {
+			returnError = fmt.Errorf("error:%s", err)
+		}
+	}
+	return string(stdout), returnError
 }
 
 func cdBuiltinFunction(input string) error {
