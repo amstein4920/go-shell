@@ -12,5 +12,4 @@ Can Run Builtins: echo, type, cd, pwd
 Can run applications install into PATH
 Can route stdout and stderr to files
 
-## Features Being Developer
-Autocomplete
+
